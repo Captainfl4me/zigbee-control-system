@@ -19,6 +19,8 @@ char read_xbee_buffer[READ_XBEE_BUFFER_LENGTH] = {0};
 char write_xbee_buffer[WRITE_XBEE_BUFFER_LENGTH] = {0};
 BufferedSerial xbee(PA_9, PA_10, 115200);
 
+PwmOut servo(D9);
+
 Thread thread;
 void watchdog_thread(){
     while (true) {
@@ -32,9 +34,10 @@ int main()
 {
     // Start watchdog thread, will flush the log queue.
     thread.start(callback(watchdog_thread));
+    servo.period_ms(20);
+    servo.pulsewidth_ms(1);
 
-    // Set blocking to serial connection so that its wait for input to be received.
-    pc.set_blocking(true);
+    xbee.set_blocking(false);
     logger.addLogToQueue(Log::LogFrameType::INFO, "Program started!");
 
     uint8_t buff[256];
@@ -42,11 +45,20 @@ int main()
     while (true) {
         if(xbee.readable()) {
             xBee::xBeeReceivePacketFrame read = rcvPacket.readFromBufferedSerial(&xbee);
-            
-            logger.addLogToQueue(Log::LogFrameType::DEBUG, "START FRAME:");
-            for (size_t i = 0; i < rcvPacket.as_bytes().len; i++)
-                logger.addLogToQueue(Log::LogFrameType::DEBUG, "%02X", rcvPacket.as_bytes().msg[i]);
-            logger.addLogToQueue(Log::LogFrameType::DEBUG, "END FRAME:");
+            if (read.len == 0) {
+                continue;
+            }
+
+            switch (read.msg[0]) {
+                case 0x01:
+                    servo.pulsewidth_ms(2);
+                break;
+                case 0x02:
+                    servo.pulsewidth_us(1500);
+                break;
+                default:
+                    servo.pulsewidth_ms(1);
+            }
         }
     }
 }

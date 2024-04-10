@@ -25,18 +25,29 @@ xBeeMessageBytesBuffer xBeeReceivePacket::as_bytes() {
 xBeeReceivePacketFrame xBeeReceivePacket::readFromBufferedSerial(BufferedSerial* sourceBuffer) {
     Log::Logger::getInstance()->addLogToQueue(Log::LogFrameType::INFO, "Start reading...");
     xBeeReceivePacketFrame rcv_packet;
-    const uint8_t CHUNK_SIZE = 64;
-    uint8_t chunk[CHUNK_SIZE] = {0x00};
+    char chunk = 0x00;
 
-    // Fetching and storing complete buffer for later
+    // Fetching first bytes of message and storing complete buffer for later
     this->msg.clear();
-    while (sourceBuffer->readable()) {
-        uint8_t read_len = sourceBuffer->read(&chunk, CHUNK_SIZE);
-        this->msg.insert(this->msg.end(), chunk, chunk + read_len);
-        ThisThread::sleep_for(1ms);
+    size_t current_byte = 0;
+    while (sourceBuffer->readable() && this->msg.size() < 3) {
+        uint8_t read_len = sourceBuffer->read(&chunk, 1);
+
+        if (this->msg.size() != 0 || chunk == 0x7E) {
+            this->msg.push_back(chunk);
+        } else {
+            Log::Logger::getInstance()->addLogToQueue(Log::LogFrameType::DEBUG, "Receive %02x!", chunk);
+        }
+
+        if (!sourceBuffer->readable()) {
+            ThisThread::sleep_for(1ms);
+        }
+    }
+    if (this->msg.size() < 3) {
+        Log::Logger::getInstance()->addLogToQueue(Log::LogFrameType::ERROR, "Msg cannot be received!");
+        return rcv_packet;
     }
 
-    size_t current_byte = 0;
     if (this->msg[current_byte++] != 0x7E) {
         Log::Logger::getInstance()->addLogToQueue(Log::LogFrameType::ERROR, "Expect 0x7E as frame start!");
         return rcv_packet;
@@ -44,13 +55,22 @@ xBeeReceivePacketFrame xBeeReceivePacket::readFromBufferedSerial(BufferedSerial*
     
     uint16_t frame_length = this->msg[current_byte] << 8 | this->msg[current_byte+1];
     current_byte += 2;
+
     if (frame_length < 12) {
         Log::Logger::getInstance()->addLogToQueue(Log::LogFrameType::ERROR, "Frame length is %d, length below 12 are suspicious!", frame_length);
         return rcv_packet;
     }
+
+    // Fetching remaining frame 
+    while (sourceBuffer->readable() && this->msg.size() < frame_length+4) {
+        uint8_t read_len = sourceBuffer->read(&chunk, 1);
+        this->msg.push_back(chunk);
+        if (!sourceBuffer->readable()) {
+            ThisThread::sleep_for(1ms);
+        }
+    }
     
-    uint16_t payload_size = frame_length - 12;
-    
+    uint16_t payload_size = frame_length - 12;    
     if (this->msg[current_byte++] != 0x90) {
         Log::Logger::getInstance()->addLogToQueue(Log::LogFrameType::ERROR, "Expect 0x90 as frame type, got %02X!", this->msg[current_byte-1]);
         return rcv_packet;
