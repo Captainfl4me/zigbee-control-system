@@ -46,21 +46,20 @@ int main()
         float analog_in = ain.read();
         logger.addLogToQueue(Log::LogFrameType::DEBUG, "Analog value: %.5f%%", analog_in);
 
-        if (analog_in <= 30) {
+        if (analog_in <= 0.30) {
             payload[0] = 0x01;
-        } else if (analog_in <= 70) {
+        } else if (analog_in <= 0.70) {
             payload[0] = 0x02;
         } else {
             payload[0] = 0x03;
         }
 
+        logger.addLogToQueue(Log::LogFrameType::DEBUG, "Payload value: %d", payload[0]);
+
         req.updateMsg(payload, 1);
         xBee::xBeeMessageBytesBuffer frame = req.as_bytes();
-        logger.addLogToQueue(Log::LogFrameType::DEBUG, "START FRAME:");
-        for (size_t i = 0; i < frame.len; i++)
-            logger.addLogToQueue(Log::LogFrameType::DEBUG, "%02X", frame.msg[i]);
-        logger.addLogToQueue(Log::LogFrameType::DEBUG, "END FRAME:");
         xbee.write(frame.msg, frame.len);
+        delete frame.msg;
         ThisThread::sleep_for(20ms);
     }
 }
