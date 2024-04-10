@@ -14,6 +14,11 @@ void uint16SliceIntoArray(uint8_t* arr, uint16_t startIdx, uint16_t val) {
     }
 }
 
+void xBeeTransmitRequest::updateMsg(uint8_t *msg, uint16_t len) {
+    this->msg = msg;
+    this->len = len;
+}
+
 xBeeMessageBytesBuffer xBeeTransmitRequest::as_bytes() {
     uint16_t xbeeMsgLen = 18+len;
     uint8_t* xbeeMsg = new uint8_t[xbeeMsgLen]; // 17 bytes for headers + len + checksum byte

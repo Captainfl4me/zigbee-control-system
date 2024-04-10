@@ -28,6 +28,7 @@ namespace xBee {
     public:
         xBeeTransmitRequest(uint64_t dest, uint16_t destShortAddr, uint8_t *msg, uint16_t len);
 
+        void updateMsg(uint8_t *msg, uint16_t len);
         xBeeMessageBytesBuffer as_bytes();
     };
 }
