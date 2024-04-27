@@ -98,6 +98,9 @@ xBeeReceivePacketFrame xBeeReceivePacket::readFromBufferedSerial(BufferedSerial*
     checksum = 0xFF - checksum;
     if (this->msg.back() != checksum) {
         Log::Logger::getInstance()->addLogToQueue(Log::LogFrameType::ERROR, "Compute checksum is %d, which is different from received frame!", checksum);
+        rcv_packet.len = 0;
+        delete rcv_packet.msg;
+        return rcv_packet;
     }
     
     return rcv_packet;

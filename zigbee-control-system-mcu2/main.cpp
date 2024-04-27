@@ -40,7 +40,6 @@ int main()
     xbee.set_blocking(false);
     logger.addLogToQueue(Log::LogFrameType::INFO, "Program started!");
 
-    uint8_t buff[256];
     xBee::xBeeReceivePacket rcvPacket;
     while (true) {
         if(xbee.readable()) {
